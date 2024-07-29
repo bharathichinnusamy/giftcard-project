@@ -1,8 +1,8 @@
 const mysql = require('mysql2')
 
-const connection = mysql.createConnection({ host: 'localhost', user: 'root', password: 'mylife84', database: 'newdatabase' })
+const db = mysql.createConnection({ host: 'localhost', user: 'root', password: 'mylife84', database: 'newdatabase' })
 
-connection.connect((err) => {
+db.connect((err) => {
   if (err) {
     console.log('Error connecting to the database:', err);
     return;
@@ -13,11 +13,12 @@ connection.connect((err) => {
 const createTableQuery = `
     CREATE TABLE gift_users (
       id INT AUTO_INCREMENT PRIMARY KEY,
-      receiver VARCHAR(255) NOT NULL,
       giver VARCHAR(255) NOT NULL ,
-      amount INT NOT NULL
+      receiver VARCHAR(255) NOT NULL,
+      amount INT NOT NULL,
+      gift_year YEAR NOT NULL
   )`
-connection.query(createTableQuery, (err, results,) => {
+db.query(createTableQuery, (err, results,) => {
   if (err) {
     console.log('Error creating table:', err);
     return;
@@ -25,8 +26,8 @@ connection.query(createTableQuery, (err, results,) => {
   console.log('Table created successfully:', results);
 });
 
-const insertQuery = `INSERT INTO gift_users (receiver,giver,amount) VALUES ('Bharathi','Nyra',500)`;
-connection.query(insertQuery, (err, results) => {
+const insertQuery = `INSERT INTO gift_users (giver,receiver,amount,) VALUES ('Bharathi','Nyra',500)`;
+db.query(insertQuery, (err, results) => {
   if (err) {
     console.log('Error inserting data:', err);
     return;
@@ -35,7 +36,7 @@ connection.query(insertQuery, (err, results) => {
 });
 
 const readQuery = `SELECT * FROM  gift_users`
-connection.query(readQuery, (err, result) => {
+db.query(readQuery, (err, result) => {
   if (err) {
     console.log('error reading data', err)
     return;
@@ -45,7 +46,7 @@ connection.query(readQuery, (err, result) => {
 
 
 const readParticularQuery = ` SELECT* FROM gift_users WHERE id=2`
-connection.query(readParticularQuery, (err, result) => {
+db.query(readParticularQuery, (err, result) => {
   if (err) {
     console.log('error reading the data', err)
     return;
@@ -54,22 +55,22 @@ connection.query(readParticularQuery, (err, result) => {
 })
 
 
-const updateParticularQuery=`UPDATE gift_users SET giver='Kabi' WHERE id=2`
-connection.query(updateParticularQuery,(err,result)=>{
-  if(err){
-    console.log('error updating data',err)
+const updateParticularQuery = `UPDATE gift_users SET giver='Kabi' WHERE id=2`
+db.query(updateParticularQuery, (err, result) => {
+  if (err) {
+    console.log('error updating data', err)
     return;
   }
-  console.log('updated the data successfully',result)
+  console.log('updated the data successfully', result)
 })
 
-const deleteParticularQuery=`DELETE FROM gift_users WHERE id=15`
-connection.query(deleteParticularQuery,(err,result)=>{
-  if(err){
-    console.log('error deleting data',err)
+const deleteParticularQuery = `DELETE FROM gift_users WHERE id=15`
+db.query(deleteParticularQuery, (err, result) => {
+  if (err) {
+    console.log('error deleting data', err)
     return;
   }
-  console.log('deleted the data successfully',result)
+  console.log('deleted the data successfully', result)
 })
 // Close the connection
 connection.end();
