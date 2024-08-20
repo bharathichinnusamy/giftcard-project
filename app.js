@@ -15,20 +15,17 @@ app.post('/create/profiles', (req, res) => {
     const checkExistedProfile = `SELECT * FROM gift_users_profile WHERE first_Name=? AND last_Name=?`
     db.query(checkExistedProfile, [first_Name, last_Name], (err, result) => {
         if (err) {
-            console.log(err)
-            res.status(400).send({ message: 'error checking profile' })
+            return res.status(400).send({ message: 'error checking profile' })
         }
-        else if (result.length >0) {
-            res.status(200).send({ message: 'The profile you are trying to create is already existed' })
+        else if (result.length > 0) {
+            return res.status(200).send({ message: 'The profile you are trying to create is already existed' })
         }
         else {
             const insertData = `INSERT INTO gift_users_profile(first_Name,last_Name,email) VALUES(?,?,?)`
             db.query(insertData, [first_Name, last_Name, email], (err, result) => {
                 if (err) {
-                    console.log(err)
                     return res.status(500).send({ message: 'error creating profile' })
                 }
-                // console.log(result)
                 res.status(201).send({ message: 'profile created successfully' })
             })
         }
@@ -41,15 +38,30 @@ app.post('/create/data', (req, res) => {
     if (!giver_Id || !receiver_Id || !amount) {
         return res.status(400).send({ error: 'giverId,reveiverId and amount are required' })
     }
-    else {
-        const insertQuery = `INSERT INTO gift_users_data (giver_Id,receiver_Id,amount) VALUES (?,?,?)`;
-        db.query(insertQuery, [giver_Id, receiver_Id, amount], (err, result) => {
-            if (err) {
-                return res.status(500).send({ error: 'Foreign Key Error', message: 'The provided id does not exist in the referenced table. Please ensure to use a valid id' })
-            }
-            res.status(201).send({ message: 'data created successfully' })
-        })
-    }
+    const addQuery = `SELECT* FROM gift_users_data WHERE giver_id=? AND receiver_id=?`
+    db.query(addQuery, [giver_Id, receiver_Id], (err, result) => {
+
+        if (result.length > 0) {
+            const addAmountQuery = `UPDATE gift_users_data SET amount=? WHERE giver_id=? AND receiver_id=?`
+            db.query(addAmountQuery, [amount+result[0].amount, giver_Id, receiver_Id], (err, result) => {
+
+                if (err) {
+                    return res.status(500).send('error updating amount')
+                }
+                res.status(200).send(result)
+            })
+        }
+        else {
+            const insertQuery = `INSERT INTO gift_users_data (giver_Id,receiver_Id,amount) VALUES (?,?,?)`;
+            db.query(insertQuery, [giver_Id, receiver_Id, amount], (err, result) => {
+
+                if (err) {
+                    return res.status(500).send({ error: 'Foreign Key Error', message: 'The provided id does not exist in the referenced table. Please ensure to use a valid id' })
+                }
+                res.status(201).send({ message: 'data created successfully' })
+            })
+        }
+    })
 })
 
 // app.post('/data', (req, res) => {
@@ -81,10 +93,27 @@ app.post('/create/data', (req, res) => {
 //     })
 // })
 
-app.get('/profiles', (req, res) => {
+app.get('/userProfile/:id', (req, res) => {
 
-    const readQuery = `SELECT * FROM  gift_users`
-    db.query(readQuery, (err, result) => {
+    const readQuery = `SELECT * FROM  gift_users_profile WHERE id=?`
+    db.query(readQuery, [req.params.id], (err, result) => {
+        if (err) {
+            return res.status(500).send('error reading profile')
+        }
+        res.status(200).send(result)
+    })
+})
+
+app.get('/userData/:id', (req, res) => {
+    // console.log(req.query.page)
+    // console.log(req.query.page_size)
+    const page = parseInt(req.query.page)
+    const page_size = parseInt(req.query.page_size)
+    const offset = (page - 1) * page_size
+    // console.log(offset)
+    const readQuery = `SELECT * FROM gift_users_data WHERE giver_id=? OR receiver_id=? ORDER BY created_At
+    LIMIT ? OFFSET ?`
+    db.query(readQuery, [req.params.id, req.params.id, page_size, offset], (err, result) => {
         if (err) {
             return res.status(500).send('error reading data')
         }
