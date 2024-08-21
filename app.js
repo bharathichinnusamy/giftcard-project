@@ -9,11 +9,13 @@ const db = mysql.createConnection({ host: 'localhost', user: 'root', password: '
 
 app.post('/create/profiles', (req, res) => {
     const { first_Name, last_Name, email } = req.body
+
     if (!first_Name || !last_Name || !email) {
         return res.status(400).send({ error: 'firstname,lastname and email are required' })
     }
     const checkExistedProfile = `SELECT * FROM gift_users_profile WHERE first_Name=? AND last_Name=?`
     db.query(checkExistedProfile, [first_Name, last_Name], (err, result) => {
+
         if (err) {
             return res.status(400).send({ message: 'error checking profile' })
         }
@@ -43,7 +45,7 @@ app.post('/create/data', (req, res) => {
 
         if (result.length > 0) {
             const addAmountQuery = `UPDATE gift_users_data SET amount=? WHERE giver_id=? AND receiver_id=?`
-            db.query(addAmountQuery, [amount+result[0].amount, giver_Id, receiver_Id], (err, result) => {
+            db.query(addAmountQuery, [amount + result[0].amount, giver_Id, receiver_Id], (err, result) => {
 
                 if (err) {
                     return res.status(500).send('error updating amount')
@@ -94,9 +96,9 @@ app.post('/create/data', (req, res) => {
 // })
 
 app.get('/userProfile/:id', (req, res) => {
-
     const readQuery = `SELECT * FROM  gift_users_profile WHERE id=?`
     db.query(readQuery, [req.params.id], (err, result) => {
+
         if (err) {
             return res.status(500).send('error reading profile')
         }
@@ -105,19 +107,31 @@ app.get('/userProfile/:id', (req, res) => {
 })
 
 app.get('/userData/:id', (req, res) => {
-    // console.log(req.query.page)
-    // console.log(req.query.page_size)
     const page = parseInt(req.query.page)
     const page_size = parseInt(req.query.page_size)
     const offset = (page - 1) * page_size
     // console.log(offset)
     const readQuery = `SELECT * FROM gift_users_data WHERE giver_id=? OR receiver_id=? ORDER BY created_At
     LIMIT ? OFFSET ?`
-    db.query(readQuery, [req.params.id, req.params.id, page_size, offset], (err, result) => {
+    db.query(readQuery, [req.params.id, req.params.id, page_size, offset], (err, results) => {
+
         if (err) {
             return res.status(500).send('error reading data')
         }
-        res.status(200).send(result)
+        const targetId = req.params.id
+        let sumSpent = 0
+        results.forEach((result) => {
+            if (result.giver_id == targetId) {
+                sumSpent = sumSpent + result.amount
+            }
+        })
+        let sumReceived = 0
+        results.forEach((result) => {
+            if (result.receiver_id == targetId) {
+                sumReceived = sumReceived + result.amount
+            }
+        })
+        res.status(200).send({ userTransaction: results, totalSpent: sumSpent, totalReceved: sumReceived })
     })
 })
 
