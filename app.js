@@ -136,7 +136,6 @@ app.get('/userData/:id', (req, res) => {
 })
 
 app.put('/profiles/:id', (req, res) => {
-    // console.log(req.body)
     const { amount } = req.body
 
     const updateParticularQuery = `UPDATE gift_users SET amount=? WHERE id=?`
