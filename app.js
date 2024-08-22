@@ -114,24 +114,23 @@ app.get('/userData/:id', (req, res) => {
     const readQuery = `SELECT * FROM gift_users_data WHERE giver_id=? OR receiver_id=? ORDER BY created_At
     LIMIT ? OFFSET ?`
     db.query(readQuery, [req.params.id, req.params.id, page_size, offset], (err, results) => {
-
         if (err) {
             return res.status(500).send('error reading data')
         }
-        const targetId = req.params.id
-        let sumSpent = 0
-        results.forEach((result) => {
-            if (result.giver_id == targetId) {
-                sumSpent = sumSpent + result.amount
+        const userSpentQuery = `SELECT SUM(amount) AS total FROM gift_users_data WHERE giver_id=?`
+        db.query(userSpentQuery, [req.params.id], (err, result) => {
+            if (err) {
+                return res.status(500).send(err)
             }
+
+            const userReceivedQuery = `SELECT SUM(amount) AS total FROM gift_users_data WHERE receiver_id=?`
+            db.query(userReceivedQuery, [req.params.id], (err, result1) => {
+                if (err) {
+                    return res.status(500).send(err)
+                }
+                res.status(200).send({ summery: results, userSpent: parseInt(result[0].total), userReceived: parseInt(result1[0].total) })
+            })
         })
-        let sumReceived = 0
-        results.forEach((result) => {
-            if (result.receiver_id == targetId) {
-                sumReceived = sumReceived + result.amount
-            }
-        })
-        res.status(200).send({ userTransaction: results, totalSpent: sumSpent, totalReceved: sumReceived })
     })
 })
 
