@@ -1,11 +1,13 @@
 const express = require('express')
 const mysql = require('mysql2')
+const util = require('util')
 const bodyParser = require('body-parser')
 
 const app = express()
 app.use(bodyParser.json());
 
 const db = mysql.createConnection({ host: 'localhost', user: 'root', password: 'mylife84', database: 'newdatabase' })
+const query = util.promisify(db.query).bind(db);
 
 app.post('/create/profiles', (req, res) => {
     const { first_Name, last_Name, email } = req.body
@@ -106,32 +108,30 @@ app.get('/userProfile/:id', (req, res) => {
     })
 })
 
-app.get('/userData/:id', (req, res) => {
+app.get('/userData/:id', async (req, res) => {
+
     const page = parseInt(req.query.page)
     const page_size = parseInt(req.query.page_size)
     const offset = (page - 1) * page_size
-    // console.log(offset)
+
     const readQuery = `SELECT * FROM gift_users_data WHERE giver_id=? OR receiver_id=? ORDER BY created_At
     LIMIT ? OFFSET ?`
-    db.query(readQuery, [req.params.id, req.params.id, page_size, offset], (err, results) => {
-        if (err) {
-            return res.status(500).send('error reading data')
-        }
-        const userSpentQuery = `SELECT SUM(amount) AS total FROM gift_users_data WHERE giver_id=?`
-        db.query(userSpentQuery, [req.params.id], (err, result) => {
-            if (err) {
-                return res.status(500).send(err)
-            }
-
-            const userReceivedQuery = `SELECT SUM(amount) AS total FROM gift_users_data WHERE receiver_id=?`
-            db.query(userReceivedQuery, [req.params.id], (err, result1) => {
-                if (err) {
-                    return res.status(500).send(err)
-                }
-                res.status(200).send({ summery: results, userSpent: parseInt(result[0].total), userReceived: parseInt(result1[0].total) })
-            })
-        })
-    })
+    const userSpentQuery = `SELECT SUM(amount) AS total FROM gift_users_data WHERE giver_id=?`
+    const userReceivedQuery = `SELECT SUM(amount) AS total FROM gift_users_data WHERE receiver_id=?`
+   
+    try {
+        const resultsPerPage = await query(readQuery, [req.params.id, req.params.id, page_size, offset])
+        const userSpent = await query(userSpentQuery, [req.params.id])
+        const userSpentResult=parseInt(userSpent[0].total)
+        const userReceived = await query(userReceivedQuery , [req.params.id])
+        const userReceivedResult=parseInt(userReceived[0].total)
+        
+        res.status(200).send({summary:resultsPerPage,userTotalSpent:userSpentResult,userTotalReceived:userReceivedResult})
+    }
+    catch (err) {
+        // console.log(err)
+        res.status(500).send(err)
+    }
 })
 
 app.put('/profiles/:id', (req, res) => {
